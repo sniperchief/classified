@@ -1,0 +1,31 @@
+diff --git a/crates/webzjs-wallet/src/wallet.rs b/crates/webzjs-wallet/src/wallet.rs
+index fa5e779..e38a40e 100644
+--- a/crates/webzjs-wallet/src/wallet.rs
++++ b/crates/webzjs-wallet/src/wallet.rs
+@@ -315,7 +315,7 @@ where
+         let change_strategy = MultiOutputChangeStrategy::new(
+             StandardFeeRule::Zip317,
+             None,
+-            ShieldedProtocol::Orchard,
++            ShieldedProtocol::Sapling, // CLASSIFIED patch: NU6.3 routes Orchard outputs to Ironwood, which zcash_client_memory cannot build
+             DustOutputPolicy::default(),
+             SplitPolicy::with_min_output_value(
+                 NonZeroUsize::new(self.target_note_count)
+@@ -499,7 +499,7 @@ where
+         let change_strategy = MultiOutputChangeStrategy::new(
+             StandardFeeRule::Zip317,
+             None,
+-            ShieldedProtocol::Orchard,
++            ShieldedProtocol::Sapling, // CLASSIFIED patch: see above
+             DustOutputPolicy::default(),
+             SplitPolicy::with_min_output_value(
+                 NonZeroUsize::new(self.target_note_count)
+@@ -632,7 +632,7 @@ where
+         let change_strategy = MultiOutputChangeStrategy::new(
+             StandardFeeRule::Zip317,
+             None,
+-            ShieldedProtocol::Orchard,
++            ShieldedProtocol::Sapling, // CLASSIFIED patch: see above
+             DustOutputPolicy::default(),
+             SplitPolicy::with_min_output_value(
+                 NonZeroUsize::new(self.target_note_count)

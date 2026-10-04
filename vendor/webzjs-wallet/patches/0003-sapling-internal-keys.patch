@@ -1,0 +1,40 @@
+diff --git a/crates/webzjs-keys/src/keys.rs b/crates/webzjs-keys/src/keys.rs
+index efa42b7..ff0b24e 100644
+--- a/crates/webzjs-keys/src/keys.rs
++++ b/crates/webzjs-keys/src/keys.rs
+@@ -118,6 +118,15 @@ impl UnifiedSpendingKey {
+             inner: self.inner.sapling().expsk.proof_generation_key(),
+         }
+     }
++
++    /// CLASSIFIED patch: proof generation key for the account's *internal* Sapling key
++    /// (ZIP 32 `derive_internal`). Shielding (`propose_shielding`) sends funds to the internal
++    /// address, so spending those notes needs this key rather than the external one.
++    pub fn to_sapling_internal_proof_generation_key(&self) -> ProofGenerationKey {
++        ProofGenerationKey {
++            inner: self.inner.sapling().derive_internal().expsk.proof_generation_key(),
++        }
++    }
+ }
+ 
+ impl From<UnifiedSpendingKey> for zcash_keys::keys::UnifiedSpendingKey {
+diff --git a/crates/webzjs-keys/src/pczt_sign.rs b/crates/webzjs-keys/src/pczt_sign.rs
+index 84290cf..3509708 100644
+--- a/crates/webzjs-keys/src/pczt_sign.rs
++++ b/crates/webzjs-keys/src/pczt_sign.rs
+@@ -189,8 +189,14 @@ pub async fn pczt_sign_inner(
+                         })?;
+                 }
+                 KeyRef::Sapling { index } => {
++                    // CLASSIFIED patch: the note may belong to the external or the internal
++                    // (change / shielding) Sapling key. The signer checks the spend against the
++                    // key, so try external first and fall back to internal.
++                    let external = usk.sapling().expsk.ask.clone();
++                    let internal = usk.sapling().derive_internal().expsk.ask;
+                     signer
+-                        .sign_sapling(index, &usk.sapling().expsk.ask)
++                        .sign_sapling(index, &external)
++                        .or_else(|_| signer.sign_sapling(index, &internal))
+                         .map_err(|e| {
+                             Error::PcztSign(format!(
+                                 "Failed to sign Sapling spend {index}: {:?}",

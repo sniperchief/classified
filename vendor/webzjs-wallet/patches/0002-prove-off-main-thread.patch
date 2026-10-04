@@ -1,0 +1,37 @@
+diff --git a/crates/webzjs-wallet/src/bindgen/wallet.rs b/crates/webzjs-wallet/src/bindgen/wallet.rs
+index 7b29651..2ff3756 100644
+--- a/crates/webzjs-wallet/src/bindgen/wallet.rs
++++ b/crates/webzjs-wallet/src/bindgen/wallet.rs
+@@ -518,10 +518,28 @@ impl WebWallet {
+         pczt: Pczt,
+         sapling_proof_gen_key: Option<ProofGenerationKey>,
+     ) -> Result<Pczt, Error> {
+-        self.inner
+-            .pczt_prove(pczt.into(), sapling_proof_gen_key.map(Into::into))
+-            .await
+-            .map(Into::into)
++        // CLASSIFIED patch: prove on a wasm_thread worker, like `sync` does. The Sapling
++        // prover (bellman `multicore`) blocks on Atomics.wait while its threads compute,
++        // which browsers forbid on the main thread ("Atomics.wait cannot be called in this
++        // context"). Off-main-thread, the main thread only awaits the join.
++        let inner = self.inner.clone();
++        let pczt: pczt::Pczt = pczt.into();
++        let key = sapling_proof_gen_key.map(Into::into);
++        let handle = thread::Builder::new()
++            .name("prove".to_string())
++            .spawn_async(move || async move {
++                inner
++                    .pczt_prove(pczt, key)
++                    .await
++                    .map_err(|e| e.to_string())
++            })
++            .unwrap_throw()
++            .join_async();
++        match handle.await {
++            Ok(Ok(pczt)) => Ok(pczt.into()),
++            Ok(Err(msg)) => Err(Error::PcztProve(msg)),
++            Err(panic) => Err(Error::PcztProve(format!("Prove thread panicked: {:?}", panic))),
++        }
+     }
+ 
+     pub async fn pczt_send(&self, pczt: Pczt) -> Result<(), Error> {

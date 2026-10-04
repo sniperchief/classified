@@ -1,0 +1,244 @@
+@import "tailwindcss";
+
+/*
+ * CLASSIFIED design system — "spy cards on a black table".
+ * Merges two references:
+ *  - Cards Against Humanity: black table, content as physical playing cards (white faces,
+ *    heavy 800 display type, 2px inset accent borders, scattered rotated cards, pill buttons).
+ *  - Kippo: monospace for every label/button/data line (uppercase, tracked, slashed zero),
+ *    1px outlined terminal panels, a single rationed hot-pink action color, no shadows/gradients.
+ * Semantic accents: pink = action · red = exposed · violet/lavender = shielded · gold = ZEC/intel.
+ */
+
+@theme {
+  --color-*: initial;
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-carbon: #29292a;
+  --color-ash: #333333;
+  --color-muted: #a3a3a3;
+  --color-dim: #6b6b6b;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --color-pink: #ee1f66; /* the action — rationed */
+  --color-red: #fe2f2f; /* exposed / surveillance */
+  --color-violet: #7333f1; /* shielded / private */
+  --color-gold: #d7b73b; /* ZEC / intel */
+
+  /* Card faces (decorative scatter + featured cards, black text on top) */
+  --color-lemon: #fffe5b;
+  --color-lavender: #ede5ff;
+  --color-cobalt: #1b5bff;
+  --color-sky: #a0e9ff;
+  --color-bubblegum: #ffa0f0;
+  --color-mint: #b4ff91;
+  --color-tangerine: #ff9559;
+
+  --font-display: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius-card: 14px;
+  --radius-pill: 38px;
+
+  --animate-fade-up: fade-up 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade-in: fade-in 0.45s ease both;
+  --animate-blink: blink 1.05s steps(1) infinite;
+  --animate-deal: deal 0.7s cubic-bezier(0.18, 0.9, 0.25, 1.15) both;
+  --animate-flip: flip 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  --animate-shake: shake 0.45s ease both;
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-pulse-ring: pulse-ring 1.6s ease-out infinite;
+  --animate-scan: scan 2.4s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-toast: toast 4.2s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+  /* A card being dealt onto the table: flies in, overshoots, settles at its --tilt. */
+  @keyframes deal {
+    0% { opacity: 0; transform: translate(var(--deal-x, 0), -60px) rotate(calc(var(--tilt, 0deg) - 18deg)) scale(0.85); }
+    100% { opacity: 1; transform: translate(0, 0) rotate(var(--tilt, 0deg)) scale(1); }
+  }
+  @keyframes flip {
+    0% { transform: rotateY(90deg) rotate(var(--tilt, 0deg)); }
+    100% { transform: rotateY(0) rotate(var(--tilt, 0deg)); }
+  }
+  @keyframes shake {
+    20%, 60% { transform: translateX(-6px) rotate(var(--tilt, 0deg)); }
+    40%, 80% { transform: translateX(6px) rotate(var(--tilt, 0deg)); }
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(0.7); opacity: 0.8; }
+    100% { transform: scale(1.9); opacity: 0; }
+  }
+  /* Sweeps an absolutely-positioned line from the top to the bottom of its container. */
+  @keyframes scan {
+    0% { top: 0%; opacity: 0; }
+    10%, 90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(var(--tilt, 0deg)); }
+    50% { transform: translateY(-10px) rotate(calc(var(--tilt, 0deg) + 1.5deg)); }
+  }
+  @keyframes toast {
+    0% { opacity: 0; transform: translateX(120%) rotate(8deg); }
+    12% { opacity: 1; transform: translateX(0) rotate(-3deg); }
+    85% { opacity: 1; transform: translateX(0) rotate(-3deg); }
+    100% { opacity: 0; transform: translateX(120%) rotate(8deg); }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #000;
+  color: #fff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* Monospace everywhere data/labels appear; slashed zero is the terminal tell. */
+.font-mono,
+code,
+pre {
+  font-feature-settings: "zero" 1;
+}
+
+/* Kippo-style label: mono, uppercase, tracked. */
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-feature-settings: "zero" 1;
+}
+
+/* CAH depth system: 2px inset rings instead of shadows. */
+.ring-in-white { box-shadow: inset 0 0 0 2px #fff; }
+.ring-in-black { box-shadow: inset 0 0 0 2px #000; }
+.ring-in-red { box-shadow: inset 0 0 0 2px var(--color-red); }
+.ring-in-violet { box-shadow: inset 0 0 0 2px var(--color-violet); }
+.ring-in-gold { box-shadow: inset 0 0 0 2px var(--color-gold); }
+.ring-in-pink { box-shadow: inset 0 0 0 2px var(--color-pink); }
+.ring-in-ash { box-shadow: inset 0 0 0 1px var(--color-ash); }
+
+/* Card back: woven pattern made of hard stripes (no blur, no gradient fade). */
+.card-back {
+  background-color: #111;
+  background-image: repeating-linear-gradient(45deg, #1d1d1e 0 6px, #111 6px 12px);
+}
+
+.redact {
+  background: currentColor;
+  border-radius: 2px;
+  color: inherit;
+  user-select: none;
+}
+
+/* Faint CRT scanlines — atmosphere only. */
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 70;
+  background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px);
+}
+
+/* ── Case file (scroll story) ── */
+
+/* Tactical map grid behind each chapter. Hard 1px lines, no fades. */
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Scroll reveal: block slides in once it enters the viewport. */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.7s ease var(--d, 0ms),
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0ms);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Sequential activation inside a revealed block (path nodes, journey steps). */
+.seq {
+  opacity: 0.18;
+  transition: opacity 0.45s ease var(--d, 0ms);
+}
+.is-in .seq {
+  opacity: 1;
+}
+
+/* Redacted text that declassifies itself when its block is revealed. */
+.xr {
+  background-color: currentColor;
+  border-radius: 2px;
+  padding: 0 2px;
+  transition: background-color 0.6s ease calc(var(--xd, 0ms) + 500ms);
+}
+.is-in .xr {
+  background-color: transparent;
+}
+
+.tilt {
+  transform: rotate(var(--tilt, 0deg));
+}
+
+.lift {
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.lift:hover {
+  transform: translateY(-6px) rotate(0deg);
+}
+
+::selection {
+  background: var(--color-pink);
+  color: #fff;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-pink);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
