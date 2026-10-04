@@ -1,4 +1,3 @@
-import { CardScatter } from "./components/CardScatter";
 import { StatusBar, TopBar } from "./components/Hud";
 import { UnlockToast } from "./components/Unlock";
 import { ErrorPanel } from "./components/ErrorPanel";
@@ -53,7 +52,6 @@ function Game() {
         <TopBar />
         <BootError />
         <main key={`${progress.step}:${progress.mode}`} className="relative">
-          {progress.step !== "briefing" && progress.step !== "complete" && <CardScatter />}
           <Current />
         </main>
         <StatusBar />

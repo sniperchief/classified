@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { UsbIcon } from "../components/icons";
+import { Objectives } from "../components/Objectives";
 import { fmtTime } from "../components/TxCinematic";
 import { Button, CopyField, DemoBadge, Explain, ExternalLink, MissionTitle, Panel, PlayingCard, Screen, Stamp, Typewriter } from "../components/ui";
 import { config, explorerAddress } from "../config";
@@ -13,6 +14,7 @@ export function Acquire() {
   const s = useSnapshot();
   const demo = progress.mode === "demo";
   const [waitingSince, setWaitingSince] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
   const elapsed = useElapsed(waitingSince);
   const b = s.agentBalance;
   const total = b.transparent + b.shielded + b.shieldedPending;
@@ -56,6 +58,15 @@ export function Acquire() {
   return (
     <Screen>
       <MissionTitle code="02" title="Acquire the intelligence." accent="intelligence" status={acquired ? "COMPLETE" : "ACTIVE"} />
+      <div className="mt-6 max-w-md">
+        <Objectives
+          items={[
+            { label: demo ? "Locate your drop address" : "Copy your drop address", done: copied || waitingSince !== null || acquired },
+            { label: demo ? "Signal your handler" : "Request test funds", done: waitingSince !== null || acquired },
+            { label: "Funds detected on chain", done: acquired },
+          ]}
+        />
+      </div>
 
       {!acquired ? (
         <div className="mt-10 space-y-10">
@@ -94,7 +105,7 @@ export function Acquire() {
 
           {s.agent && (
             <div className="max-w-3xl">
-              <CopyField label="Your public drop address" value={s.agent.transparent} tone="red" />
+              <CopyField label="Your public drop address" value={s.agent.transparent} tone="red" onCopy={() => setCopied(true)} />
             </div>
           )}
 

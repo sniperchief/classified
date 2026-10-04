@@ -18,9 +18,9 @@ export function Button({
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size; loading?: boolean }) {
   const sizes: Record<Size, string> = {
-    md: "px-6 py-3 text-xs",
-    lg: "px-9 py-4 text-sm",
-    xl: "px-12 py-6 text-lg",
+    md: "px-5 py-3 text-xs sm:px-6",
+    lg: "px-7 py-4 text-sm sm:px-9",
+    xl: "px-7 py-5 text-base sm:px-12 sm:py-6 sm:text-lg",
   };
   const styles: Record<Variant, string> = {
     primary: "bg-pink text-white hover:-translate-y-0.5 active:translate-y-0.5",
@@ -31,7 +31,7 @@ export function Button({
   return (
     <button
       {...rest}
-      className={`inline-flex items-center justify-center gap-3 rounded-[38px] font-mono font-bold uppercase tracking-[0.12em] transition-all duration-150 select-none disabled:pointer-events-none disabled:opacity-35 ${sizes[size]} ${styles[variant]} ${className}`}
+      className={`inline-flex max-w-full items-center justify-center gap-3 rounded-[38px] text-center font-mono font-bold uppercase tracking-[0.12em] transition-all duration-150 select-none disabled:pointer-events-none disabled:opacity-35 ${sizes[size]} ${styles[variant]} ${className}`}
       onClick={(e) => {
         sfx.click();
         onClick?.(e);
@@ -137,7 +137,7 @@ export function MissionTitle({ code, title, accent, status = "ACTIVE" }: { code:
         </span>
         <span>// {status}</span>
       </div>
-      <h1 className="mt-4 font-display text-[44px] font-black leading-[0.98] tracking-[-0.02em] sm:text-[65px] lg:text-[80px]">
+      <h1 className="mt-4 break-words font-display text-[clamp(2.1rem,9.5vw,5rem)] font-black leading-[0.98] tracking-[-0.02em]">
         {accent ? (
           <>
             {parts[0]}
@@ -231,7 +231,7 @@ export function Stamp({ children, tone = "pink", className = "" }: { children: R
 
 /* ───────────────────────── Data & copy ───────────────────────── */
 
-export function CopyField({ label, value, tone = "white" }: { label: string; value: string; tone?: "white" | "red" | "violet" }) {
+export function CopyField({ label, value, tone = "white", onCopy }: { label: string; value: string; tone?: "white" | "red" | "violet"; onCopy?: () => void }) {
   const [copied, setCopied] = useState(false);
   const ring = { white: "ring-in-white", red: "ring-in-red", violet: "ring-in-violet" }[tone];
   return (
@@ -248,6 +248,7 @@ export function CopyField({ label, value, tone = "white" }: { label: string; val
               /* clipboard blocked; user can select manually */
             }
             sfx.confirm();
+            onCopy?.();
             setCopied(true);
             setTimeout(() => setCopied(false), 1600);
           }}
@@ -311,5 +312,5 @@ export function DemoBadge() {
 }
 
 export function Screen({ children }: { children: ReactNode }) {
-  return <section className="relative mx-auto w-full max-w-5xl animate-fade-in px-4 pb-32 pt-10 sm:px-6 sm:pt-16">{children}</section>;
+  return <section className="relative mx-auto w-full max-w-5xl animate-fade-in px-4 pb-36 pt-8 sm:px-6 sm:pb-32 sm:pt-16">{children}</section>;
 }

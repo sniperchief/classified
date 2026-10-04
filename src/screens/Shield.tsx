@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { ErrorPanel } from "../components/ErrorPanel";
+import { Objectives } from "../components/Objectives";
 import { CaseIcon, EyeIcon, LockIcon, UsbIcon } from "../components/icons";
 import { TxCinematic } from "../components/TxCinematic";
 import { Button, Explain, ExternalLink, MissionTitle, Panel, Screen, Stamp, Typewriter } from "../components/ui";
@@ -25,6 +26,18 @@ export function Shield() {
   return (
     <Screen>
       <MissionTitle code="03" title="Shield the intelligence." accent="Shield" status={secured || nothingToShield ? "COMPLETE" : "ACTIVE"} />
+      <div className="mt-6 max-w-md">
+        <Objectives
+          items={
+            nothingToShield
+              ? [{ label: "Funds already shielded", done: true }]
+              : [
+                  { label: "Shield the funds", done: tx.phase === "confirming" || secured },
+                  { label: "Confirmed in a block", done: secured },
+                ]
+          }
+        />
+      </div>
 
       <div className="mt-10 space-y-10">
         <Surveillance exposed={exposed} address={s.agent?.transparent} amount={b.transparent} demo={demo} />
@@ -47,8 +60,8 @@ export function Shield() {
             <ShieldExplain />
             {tx.error != null && <ErrorPanel error={tx.error} context="shielding" onRetry={shield} />}
             {tx.error == null && (
-              <div className="flex flex-col items-start gap-3">
-                <Button size="xl" onClick={shield} disabled={b.transparent === 0n} className="!px-20 !py-8 !text-2xl">
+              <div className="flex flex-col items-stretch gap-3 sm:items-start">
+                <Button size="xl" onClick={shield} disabled={b.transparent === 0n} className="w-full !py-7 !text-xl sm:w-auto sm:!px-20 sm:!py-8 sm:!text-2xl">
                   🔒 Shield
                 </Button>
                 <span className="label text-[10px] text-dim">

@@ -1,5 +1,4 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { CardScatter } from "../components/CardScatter";
 import { Button, DemoBadge, ExternalLink, Panel, Stamp } from "../components/ui";
 import { config, explorerTx } from "../config";
 import { RANKS, clearance, useGame } from "../game/state";
@@ -34,8 +33,7 @@ export function Complete() {
   ].filter((l) => l && !l.txid.startsWith("pending:")) as { label: string; txid: string }[];
 
   return (
-    <div className="relative overflow-hidden">
-      <CardScatter variant="hero" />
+    <div className="relative">
       <section className="relative mx-auto max-w-[1200px] px-4 pb-32 pt-14 sm:px-6 sm:pt-20">
         {/* Headline + rank card */}
         <div className="grid items-center gap-10 lg:grid-cols-[1.4fr_1fr]">
@@ -61,6 +59,9 @@ export function Complete() {
             <div>
               <div className="font-display text-5xl font-black leading-[0.95]">{RANKS[lvl]}.</div>
               <div className="mt-3 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-black/60">Clearance {lvl} / 6</div>
+              {(progress.intel ?? 0) > 0 && (
+                <div className="mt-1 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-black/60">★ {progress.intel} intel points</div>
+              )}
             </div>
             <div className="flex gap-1">
               {RANKS.slice(1).map((_, i) => (
@@ -91,21 +92,21 @@ export function Complete() {
         </div>
 
         {/* Quote */}
-        <blockquote className="mt-24 font-display text-[40px] font-black leading-[1.02] tracking-[-0.02em] sm:text-[65px]">
+        <blockquote className="mt-20 font-display text-[clamp(2rem,9vw,4rem)] font-black leading-[1.02] tracking-[-0.02em] sm:mt-24">
           You didn't read a tutorial.
           <br />
           <span className="text-pink">You completed a mission.</span>
         </blockquote>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-          <Button size="xl" onClick={replay}>
+          <Button size="xl" onClick={replay} className="w-full sm:w-auto">
             Run the mission again
           </Button>
           <a
             href="https://z.cash/learn/"
             target="_blank"
             rel="noopener noreferrer"
-            className="ring-in-white inline-flex items-center justify-center rounded-[38px] px-12 py-6 font-mono text-lg font-bold uppercase tracking-[0.12em] transition hover:bg-white hover:text-black"
+            className="ring-in-white inline-flex w-full items-center justify-center rounded-[38px] px-7 py-5 text-center font-mono text-base font-bold uppercase tracking-[0.12em] transition hover:bg-white hover:text-black sm:w-auto sm:px-12 sm:py-6 sm:text-lg"
           >
             Learn how Zcash works ↗
           </a>
@@ -134,12 +135,12 @@ export function Complete() {
 
           {/* Bonus operation */}
           {!unshielded ? (
-            <div className="ring-in-red rounded-[14px] bg-white p-7 text-black" style={{ transform: "rotate(-1.5deg)" }}>
+            <div className="ring-in-red rounded-[14px] bg-white p-6 text-black sm:p-7" style={{ transform: "rotate(-1.5deg)" }}>
               <div className="flex items-center justify-between">
                 <span className="label text-red">Bonus operation</span>
                 <span className="label text-[10px] text-black/40">Optional · ~2 min</span>
               </div>
-              <div className="mt-3 font-display text-5xl font-black leading-none">Extraction.</div>
+              <div className="mt-3 font-display text-4xl font-black leading-none sm:text-5xl">Extraction.</div>
               <p className="mt-3 text-[15px] leading-[1.7] text-black/70">Intelligence extraction requires moving funds back to the public side.</p>
               <Button variant="ink" className="mt-6" onClick={() => go("bonus")}>
                 Unshield →

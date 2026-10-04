@@ -24,6 +24,7 @@ export function TopBar() {
             <span className="label ring-in-white hidden items-center gap-2 rounded-[38px] px-3.5 py-1.5 text-[10px] md:flex">
               <span className="text-muted">Clearance {lvl}</span>
               <span>{RANKS[lvl]}</span>
+              {(progress.intel ?? 0) > 0 && <span className="text-gold">★ {progress.intel}</span>}
             </span>
           )}
           {demo ? (

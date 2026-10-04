@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { EyeIcon, ShieldIcon } from "../components/icons";
+import { Objectives } from "../components/Objectives";
 import { Button, Explain, MissionTitle, Screen, Typewriter } from "../components/ui";
 import { useGame } from "../game/state";
 import { sfx } from "../lib/sound";
@@ -20,6 +21,14 @@ export function Infiltrate() {
   return (
     <Screen>
       <MissionTitle code="04" title="Infiltration." accent="Infiltration" status={choice === "shielded" ? "ROUTE LOCKED" : "PLAY A CARD"} />
+      <div className="mt-6 max-w-md">
+        <Objectives
+          items={[
+            { label: "Choose a channel", done: choice !== null },
+            { label: "Avoid surveillance", done: choice === "shielded" },
+          ]}
+        />
+      </div>
       <div className="mt-10 space-y-10">
         <Typewriter lines={["The intelligence is secure. Now it has to reach your contact.", "Two channels. Play one card, agent."]} />
 

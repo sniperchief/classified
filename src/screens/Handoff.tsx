@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ErrorPanel } from "../components/ErrorPanel";
+import { Objectives } from "../components/Objectives";
+import { SlideToDeliver } from "../components/SlideToDeliver";
 import { AgentIcon, HouseIcon, LockIcon } from "../components/icons";
 import { TxCinematic } from "../components/TxCinematic";
 import { Button, CopyField, MissionTitle, Panel, PlayingCard, Screen, Stamp, Typewriter } from "../components/ui";
@@ -12,6 +14,8 @@ import { sfx } from "../lib/sound";
 
 const CODE_NAME = "NIGHTJAR";
 const field = "w-full rounded-[38px] bg-black px-5 py-3.5 font-mono text-white placeholder:text-dim ring-in-white";
+/** Quick amounts for phones: tap instead of typing. */
+const CHIPS = [1_000_000n, 5_000_000n, 10_000_000n];
 
 export function Handoff() {
   const { engine, go, update, progress } = useGame();
@@ -22,6 +26,7 @@ export function Handoff() {
 
   const available = s.agentBalance.shielded;
   const [amount, setAmount] = useState(() => formatZats(config.defaultSendZats));
+  const [otherAmount, setOtherAmount] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [custom, setCustom] = useState("");
   const [fee, setFee] = useState<bigint | null>(null);
@@ -64,10 +69,27 @@ export function Handoff() {
   const delivered = tx.phase === "confirmed";
   const sentZats = progress.sendZats ? BigInt(progress.sendZats) : (zats ?? 0n);
   const sentToContact = (progress.sendTo ?? recipient) === s.contactAddress && s.contactIsLocal;
+  // The receive side: NIGHTJAR's own wallet must detect the note before we call it received.
+  const receipt = useTxWatch(delivered && sentToContact ? progress.sendTxid : undefined, "contact");
+  const contactReceived = isConfirmed(receipt);
+  const broadcast = tx.phase === "confirming" || delivered;
+  const estFee = fee ?? 10_000n;
 
   return (
     <Screen>
       <MissionTitle code="05" title="Secure the handoff." accent="handoff" status={delivered ? "DELIVERED" : "ACTIVE"} />
+      <div className="mt-6 max-w-md">
+        <Objectives
+          items={[
+            { label: "Set the amount", done: broadcast || (zats !== null && zats > 0n && !amountError) },
+            { label: `Deliver to ${sentToContact || !customOpen ? CODE_NAME : "recipient"}`, done: broadcast },
+            { label: "Confirmed in a block", done: delivered },
+            sentToContact
+              ? { label: `${CODE_NAME} receives it`, done: contactReceived }
+              : { label: "Recipient's wallet can see it", done: delivered },
+          ]}
+        />
+      </div>
       <div className="mt-10 space-y-10">
         <Typewriter lines={["CONTACT LOCATED.", `Agent ${CODE_NAME} is waiting at the rendezvous.`]} speed={26} />
 
@@ -96,23 +118,57 @@ export function Handoff() {
                 <div className="label text-muted">Transfer orders</div>
                 {s.contactAddress && !customOpen && <CopyField label={`${CODE_NAME}'s shielded address`} value={s.contactAddress} tone="violet" />}
 
-                <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-                  <label className="block">
-                    <span className="label mb-2 block text-muted">Amount ({config.ticker})</span>
+                <div>
+                  <span className="label mb-2 block text-muted">Amount ({config.ticker})</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {CHIPS.map((c) => {
+                      const v = formatZats(c);
+                      const selected = !otherAmount && amount === v;
+                      const affordable = c + estFee <= available;
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          disabled={!affordable}
+                          onClick={() => {
+                            setOtherAmount(false);
+                            setAmount(v);
+                          }}
+                          className={`min-h-12 rounded-[38px] font-mono text-base font-bold transition-colors disabled:opacity-30 ${
+                            selected ? "bg-white text-black" : "ring-in-ash text-white hover:bg-white/5"
+                          }`}
+                        >
+                          {v}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    className="label mt-3 text-[11px] text-dim hover:text-white"
+                    onClick={() => {
+                      setOtherAmount(!otherAmount);
+                      if (otherAmount) setAmount(formatZats(config.defaultSendZats));
+                    }}
+                  >
+                    {otherAmount ? "− Use a quick amount" : "+ Other amount"}
+                  </button>
+                  {otherAmount && (
                     <input
                       value={amount}
                       onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
                       inputMode="decimal"
-                      className={`${field} text-lg font-bold`}
+                      autoFocus
+                      className={`${field} mt-3 text-lg font-bold`}
                     />
-                  </label>
-                  <div className="font-mono text-xs leading-6 text-muted sm:text-right">
-                    <div>
-                      Shielded: <span className="font-bold text-white">{formatZats(available)}</span>
-                    </div>
-                    <div>
-                      Fee (est.): <span className="font-bold text-white">{fee !== null ? formatZats(fee) : "—"}</span>
-                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-xs leading-6 text-muted">
+                  <div>
+                    Shielded: <span className="font-bold text-white">{formatZats(available)}</span>
+                  </div>
+                  <div>
+                    Fee (est.): <span className="font-bold text-white">{fee !== null ? formatZats(fee) : "—"}</span>
                   </div>
                 </div>
                 {amountError && amount && <p className="font-mono text-xs text-red">{amountError}</p>}
@@ -146,9 +202,13 @@ export function Handoff() {
             )}
             {tx.error != null && <ErrorPanel error={tx.error} context="delivery" onRetry={deliver} />}
             {tx.error == null && (
-              <Button size="xl" onClick={deliver} disabled={!!addrError || !!amountError || available === 0n}>
-                Deliver →
-              </Button>
+              <div className="max-w-xl">
+                <SlideToDeliver
+                  onConfirm={deliver}
+                  disabled={!!addrError || !!amountError || available === 0n}
+                  target={customOpen && custom.trim() ? "RECIPIENT" : CODE_NAME}
+                />
+              </div>
             )}
           </>
         ) : (
@@ -169,7 +229,7 @@ export function Handoff() {
               <div className="animate-fade-up space-y-8">
                 <Stamp tone="pink">Delivery confirmed</Stamp>
                 {sentToContact ? (
-                  <RecipientTerminal txid={progress.sendTxid!} zats={sentZats} />
+                  <RecipientTerminal received={contactReceived} zats={sentZats} />
                 ) : (
                   <p className="text-[15px] leading-[1.7] text-muted">Delivered to an external address. The recipient's wallet will show the funds once it syncs.</p>
                 )}
@@ -186,9 +246,7 @@ export function Handoff() {
 }
 
 /** The receive side: NIGHTJAR's own wallet detecting the incoming shielded note. */
-function RecipientTerminal({ txid, zats }: { txid: string; zats: bigint }) {
-  const status = useTxWatch(txid, "contact");
-  const received = isConfirmed(status);
+function RecipientTerminal({ received, zats }: { received: boolean; zats: bigint }) {
   useEffect(() => {
     if (received) sfx.success();
   }, [received]);

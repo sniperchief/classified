@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { ErrorPanel } from "../components/ErrorPanel";
+import { Objectives } from "../components/Objectives";
 import { HouseIcon } from "../components/icons";
 import { Button, Check, CopyField, Explain, MissionTitle, Panel, PlayingCard, Screen, Stamp, Typewriter } from "../components/ui";
 import { useGame, useSnapshot } from "../game/state";
@@ -67,6 +68,15 @@ export function Safehouse() {
   return (
     <Screen>
       <MissionTitle code="01" title="Establish the safehouse." accent="safehouse" status={currentView === "established" ? "COMPLETE" : "ACTIVE"} />
+      <div className="mt-6 max-w-md">
+        <Objectives
+          items={[
+            { label: "Create your wallet", done: s.hasWallet },
+            { label: "Back up recovery codes", done: currentView === "established" },
+            { label: "Safehouse online", done: currentView === "established" && (s.lastSyncAt !== null || progress.mode === "demo") },
+          ]}
+        />
+      </div>
 
       {currentView === "intro" && (
         <div className="mt-10 space-y-10">
@@ -142,7 +152,7 @@ export function Safehouse() {
               <span className="label text-gold">Recovery codes // eyes only</span>
               <span className="label text-[10px] text-dim">{demo ? "Demo — not a real wallet" : "Testnet training wallet"}</span>
             </div>
-            <ol className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
+            <ol className="grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6">
               {phrase.split(" ").map((w, i) => (
                 <li
                   key={i}

@@ -41,6 +41,9 @@ export interface Progress {
   sendZats?: string; // bigint as string for JSON
   unshieldTxid?: string;
   unshieldZats?: string;
+  /** Field-quiz score (correct first answers) and the questions already asked. */
+  intel?: number;
+  quizDone?: string[];
 }
 
 const KEY = "classified.progress.v1";
