@@ -200,6 +200,23 @@ pre {
   transform: translateY(-6px) rotate(0deg);
 }
 
+/* Tailwind v4 resets buttons to the default cursor; everything clickable gets the hand.
+ * In the base layer so utilities (e.g. cursor-grab on the delivery slider) still win. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  label:has(input[type="checkbox"]),
+  input[type="checkbox"]:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
+}
+
 ::selection {
   background: var(--color-pink);
   color: #fff;

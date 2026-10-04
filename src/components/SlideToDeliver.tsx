@@ -59,7 +59,7 @@ export function SlideToDeliver({
           type="button"
           disabled={disabled || done}
           aria-label={`Deliver to ${target}`}
-          className={`absolute left-1 top-1 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-black ${dragging ? "" : "transition-transform duration-300"}`}
+          className={`absolute left-1 top-1 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-black ${dragging ? "cursor-grabbing" : "cursor-grab transition-transform duration-300"}`}
           style={{ transform: `translateX(${x * maxTravel()}px)` }}
           onPointerDown={(e) => {
             if (disabled || done) return;
