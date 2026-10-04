@@ -41,6 +41,8 @@ export interface Progress {
   sendZats?: string; // bigint as string for JSON
   unshieldTxid?: string;
   unshieldZats?: string;
+  /** Mission to return to after visiting the landing page mid-run (via the logo). */
+  resume?: Step;
   /** Field-quiz score (correct first answers) and the questions already asked. */
   intel?: number;
   quizDone?: string[];

@@ -7,7 +7,7 @@ import { isMuted, setMuted } from "../lib/sound";
 const ORDER = ["safehouse", "acquire", "shield", "infiltrate", "handoff", "complete", "bonus"];
 
 export function TopBar() {
-  const { progress } = useGame();
+  const { progress, update } = useGame();
   const [muted, setM] = useState(isMuted());
   const inGame = progress.step !== "briefing";
   const demo = progress.mode === "demo" && inGame;
@@ -15,10 +15,20 @@ export function TopBar() {
   return (
     <div className="sticky top-0 z-50 bg-black">
       <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-4 sm:px-6">
-        <div className="flex items-baseline gap-3">
+        <button
+          type="button"
+          aria-label="CLASSIFIED — back to the landing page"
+          className="flex items-baseline gap-3 rounded-[6px] text-left"
+          onClick={() => {
+            if (progress.step === "briefing") return window.scrollTo({ top: 0, behavior: "smooth" });
+            // Keep the run: the landing page offers "Resume mission" back to this step.
+            update({ step: "briefing", resume: progress.step });
+            window.scrollTo({ top: 0 });
+          }}
+        >
           <span className="font-display text-xl font-black tracking-[-0.01em] sm:text-2xl">CLASSIFIED</span>
           <span className="label hidden text-[10px] text-dim sm:inline">CIA // Top secret</span>
-        </div>
+        </button>
         <div className="flex items-center gap-2">
           {inGame && (
             <span className="label ring-in-white hidden items-center gap-2 rounded-[38px] px-3.5 py-1.5 text-[10px] md:flex">
@@ -100,7 +110,7 @@ export function StatusBar() {
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] sm:px-6">
         <div className="flex items-center gap-3 text-muted">
           <span className={`h-2 w-2 rounded-full ${s.syncing ? "animate-pulse bg-gold" : "bg-white"}`} />
-          <span>{live ? (s.syncing ? "Syncing" : "Link secure") : "Simulation"}</span>
+          <span>{live ? (s.syncing ? "Updating…" : "Connected") : "Demo mode"}</span>
           {live && s.chainTip > 0 && <span className="hidden text-dim sm:inline">Block {s.chainTip.toLocaleString()}</span>}
         </div>
         <div className="flex items-center gap-2">

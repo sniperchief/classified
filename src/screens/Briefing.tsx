@@ -8,7 +8,8 @@ import { Dossier } from "./Dossier";
 const BOOT_KEY = "classified.booted";
 
 export function Briefing() {
-  const { go, setMode } = useGame();
+  const { go, setMode, progress, update } = useGame();
+  const resume = progress.resume;
   const [booting, setBooting] = useState(() => {
     try {
       return sessionStorage.getItem(BOOT_KEY) !== "1";
@@ -24,15 +25,21 @@ export function Briefing() {
     setAccepted(true);
     // Brief "mission accepted" beat, then straight into Mission 01.
     setTimeout(() => {
-      setMode(mode);
-      go("safehouse");
+      if (resume) {
+        // Resuming keeps the run's mode (live or demo) — only a fresh start can switch it.
+        update({ resume: undefined });
+        go(resume);
+      } else {
+        setMode(mode);
+        go("safehouse");
+      }
     }, 750);
   };
 
   return (
     <section className="relative">
       {booting && <BootSequence onDone={() => setBooting(false)} />}
-      {accepted && <AcceptedFlash />}
+      {accepted && <AcceptedFlash resuming={!!resume} />}
 
       {!booting && (
         <>
@@ -62,7 +69,7 @@ export function Briefing() {
 
                 <div className="mt-8 animate-fade-up [animation-delay:1300ms]">
                   <Button size="xl" onClick={() => start("live")} disabled={accepted} className="w-full sm:w-auto">
-                    Accept mission →
+                    {resume ? "Resume mission →" : "Accept mission →"}
                   </Button>
                   <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-dim">
                     <span>~5 min · {config.isTestnet ? "Zcash testnet" : "Zcash"} · No real money</span>
@@ -144,13 +151,13 @@ function BootSequence({ onDone }: { onDone: () => void }) {
   );
 }
 
-function AcceptedFlash() {
+function AcceptedFlash({ resuming }: { resuming: boolean }) {
   return (
     <div className="fixed inset-0 z-[80] grid animate-fade-in place-items-center bg-black/85 px-4">
       <div className="ring-in-pink animate-deal rounded-[14px] bg-white px-6 py-7 text-center text-black sm:px-10 sm:py-8" style={{ "--tilt": "-4deg" } as CSSProperties}>
         <div className="label text-pink">Operation active</div>
-        <div className="mt-2 font-display text-4xl font-black leading-none sm:text-6xl">Mission accepted.</div>
-        <div className="label mt-4 text-[11px] text-black/60">Proceeding to 01 // Safehouse</div>
+        <div className="mt-2 font-display text-4xl font-black leading-none sm:text-6xl">{resuming ? "Welcome back." : "Mission accepted."}</div>
+        <div className="label mt-4 text-[11px] text-black/60">{resuming ? "Resuming your operation" : "Proceeding to 01 // Safehouse"}</div>
       </div>
     </div>
   );
