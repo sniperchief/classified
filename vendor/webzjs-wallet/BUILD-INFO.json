@@ -2,10 +2,18 @@
   "source": "https://github.com/ZcashCommunityGrants/WebZjs",
   "commit": "bdbc6f2f9e8c60f722c73ca7c83b48b861428f70",
   "toolchain": "nightly-2025-06-15",
-  "built": "2026-10-04T04:21Z",
+  "built": "2026-10-05T10:59Z",
   "patches": [
     "patches/0001-sapling-change-pool.patch",
     "patches/0002-prove-off-main-thread.patch",
-    "patches/0003-sapling-internal-keys.patch"
-  ]
+    "patches/0003-sapling-internal-keys.patch",
+    "patches/0004b-nu7-webzjs.patch"
+  ],
+  "librustzcash": {
+    "rev": "0a2c6d1ae6274e6af2291e312f7b7459516882f2",
+    "patches": [
+      "patches/0004a-nu7-librustzcash.patch"
+    ],
+    "note": "NU7 (ZIP 259) mirrored from upstream 928592188 + a0c73f6d4"
+  }
 }

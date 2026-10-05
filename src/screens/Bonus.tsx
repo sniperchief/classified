@@ -2,10 +2,11 @@ import { useCallback } from "react";
 import { ErrorPanel } from "../components/ErrorPanel";
 import { CaseIcon, LockIcon, UsbIcon } from "../components/icons";
 import { TxCinematic } from "../components/TxCinematic";
-import { Button, Explain, ExternalLink, MissionTitle, Screen, Stamp, Typewriter } from "../components/ui";
+import { Button, ExternalLink, MissionTitle, Panel, Screen, Stamp, Typewriter } from "../components/ui";
 import { config, explorerAddress } from "../config";
 import { useGame, useSnapshot } from "../game/state";
 import { useTxRunner } from "../game/useTxRunner";
+import { useUnlockChime } from "../game/useUnlockChime";
 import { formatZats } from "../lib/format";
 
 export function Bonus() {
@@ -16,6 +17,9 @@ export function Bonus() {
   const tx = useTxRunner(progress.unshieldTxid, onTxid);
   const amount = config.defaultUnshieldZats;
   const done = tx.phase === "confirmed";
+  const short = s.agentBalance.shielded <= amount;
+  const confirming = short && s.agentBalance.shieldedPending > 0n;
+  useUnlockChime(short);
 
   const unshield = () => {
     if (!engine || !s.agent) return;
@@ -25,28 +29,36 @@ export function Bonus() {
 
   return (
     <Screen>
-      <MissionTitle code="B1" title="Extraction." accent="Extraction" status="BONUS OPERATION" />
-      <div className="mt-10 space-y-10">
-        <Typewriter lines={["Intelligence extraction requires moving funds back to the public side.", "Some exchanges and services only accept public funds."]} />
-        <Explain term="What is unshielding?">
-          Unshielding moves funds from the shielded pool to a transparent address. Once there, the amount and address are public again.
-        </Explain>
+      <MissionTitle
+        code="B1"
+        title="Extraction."
+        accent="Extraction"
+        status="BONUS OPERATION"
+        info={{
+          term: "What is unshielding?",
+          body: "Unshielding moves funds from the shielded pool to a transparent address. Once there, the amount and address are public again — useful when a service only accepts public funds.",
+        }}
+      />
+      <div className="mt-8 space-y-8">
+        <Typewriter lines={["Extraction: move funds back to the public side."]} />
 
         {tx.phase === "idle" ? (
           <>
-            <p className="font-mono text-sm text-muted">
-              Move <span className="font-bold text-white">{formatZats(amount)} {config.ticker}</span> from your shielded balance to your own public address.
-            </p>
             {tx.error != null && <ErrorPanel error={tx.error} context="extraction" onRetry={unshield} />}
             {tx.error == null && (
-              <div className="flex flex-wrap gap-4">
-                <Button size="xl" onClick={unshield} disabled={s.agentBalance.shielded <= amount}>
-                  Unshield
-                </Button>
-                <Button variant="outline" size="xl" onClick={() => go("complete")}>
-                  Back to debrief
-                </Button>
-              </div>
+              <Panel className="max-w-2xl space-y-5 p-5 sm:p-7">
+                <p className="label text-[10px] text-dim">
+                  {confirming ? "Unlocks automatically when funds confirm" : short ? "Not enough shielded funds to extract" : `${formatZats(amount)} ${config.ticker} → your public address`}
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Button size="xl" onClick={unshield} disabled={short} className={`w-full sm:w-auto ${confirming ? "animate-pulse" : ""}`}>
+                    {confirming ? "⏳ Funds confirming" : "Unshield"}
+                  </Button>
+                  <Button variant="outline" size="xl" onClick={() => go("complete")} className="w-full sm:w-auto">
+                    Back to debrief
+                  </Button>
+                </div>
+              </Panel>
             )}
           </>
         ) : (
@@ -66,11 +78,10 @@ export function Bonus() {
             {done && (
               <div className="animate-fade-up space-y-6">
                 <Stamp tone="red">Extraction complete</Stamp>
-                <p className="text-[15px] leading-[1.7] text-muted">
-                  {formatZats(amount)} {config.ticker} is back on the public side.{" "}
-                  {!demo && s.agent && <ExternalLink href={explorerAddress(s.agent.transparent)}>See it on the public explorer</ExternalLink>}
+                <p className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-sm text-muted">
+                  {formatZats(amount)} {config.ticker} is public again.
+                  {!demo && s.agent && <ExternalLink href={explorerAddress(s.agent.transparent)}>See it on the explorer</ExternalLink>}
                 </p>
-                <p className="text-sm text-dim">Run the mission again and you can shield it right back.</p>
                 <Button size="xl" onClick={() => go("complete")}>
                   Return to debrief →
                 </Button>

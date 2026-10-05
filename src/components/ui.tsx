@@ -126,7 +126,23 @@ export function Panel({
 
 /* ───────────────────────── Headings ───────────────────────── */
 
-export function MissionTitle({ code, title, accent, status = "ACTIVE" }: { code: string; title: string; accent?: string; status?: string }) {
+export type Info = { term: string; body: ReactNode; more?: ReactNode };
+
+export function MissionTitle({
+  code,
+  title,
+  accent,
+  status = "ACTIVE",
+  info,
+}: {
+  code: string;
+  title: string;
+  accent?: string;
+  status?: string;
+  /** Field-manual explainer, opened from a "?" next to the title instead of filling the page. */
+  info?: Info;
+}) {
+  const [open, setOpen] = useState(false);
   const parts = accent ? title.split(accent) : [title];
   return (
     <header className="animate-fade-up">
@@ -136,6 +152,16 @@ export function MissionTitle({ code, title, accent, status = "ACTIVE" }: { code:
           MISSION {code}
         </span>
         <span>// {status}</span>
+        {info && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label={`Field manual: ${info.term}`}
+            className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-full font-mono text-sm font-bold text-white ring-in-white transition-colors hover:bg-white hover:text-black"
+          >
+            ?
+          </button>
+        )}
       </div>
       <h1 className="mt-4 break-words font-display text-[clamp(2.1rem,9.5vw,5rem)] font-black leading-[0.98] tracking-[-0.02em]">
         {accent ? (
@@ -148,7 +174,57 @@ export function MissionTitle({ code, title, accent, status = "ACTIVE" }: { code:
           title
         )}
       </h1>
+      {info && open && <InfoSheet info={info} onClose={() => setOpen(false)} />}
     </header>
+  );
+}
+
+/** The field manual, as a bottom sheet on phones and a centred card on desktop. */
+function InfoSheet({ info, onClose }: { info: Info; onClose: () => void }) {
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[90] flex animate-fade-in items-end justify-center bg-black/80 p-3 sm:items-center sm:p-6" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="ring-in-gold w-full max-w-lg animate-fade-up rounded-[14px] bg-white p-6 text-black sm:p-7" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3">
+          <span className="label text-black/60">Field manual</span>
+          <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-full font-mono text-sm font-bold ring-in-black hover:bg-black hover:text-white">
+            ✕
+          </button>
+        </div>
+        <div className="mt-3 font-display text-2xl font-extrabold leading-tight">{info.term}</div>
+        <p className="mt-2 text-[15px] leading-[1.7] text-black/80 sm:text-base">{info.body}</p>
+        {info.more && (
+          <>
+            <button type="button" className="label mt-4 text-black/50 hover:text-black" onClick={() => setMore(!more)}>
+              {more ? "− Less" : "+ Technical detail"}
+            </button>
+            {more && <div className="mt-2 text-sm leading-[1.7] text-black/70">{info.more}</div>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Compact in-panel step tracker: dots + "Step 2 of 3 · label". `current` = index of the step in progress. */
+export function Steps({ labels, current }: { labels: string[]; current: number }) {
+  const complete = current >= labels.length;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      <div className="flex items-center gap-1.5" aria-hidden>
+        {labels.map((l, i) => (
+          <span key={l} className={`h-1.5 rounded-full transition-all duration-300 ${i < current ? "w-5 bg-white" : i === current ? "w-8 bg-pink" : "w-5 bg-ash"}`} />
+        ))}
+      </div>
+      <span className="label text-[10px] text-muted">
+        {complete ? "Objective complete" : <>Step {current + 1} of {labels.length} · <span className="text-white">{labels[current]}</span></>}
+      </span>
+    </div>
   );
 }
 
@@ -256,40 +332,6 @@ export function CopyField({ label, value, tone = "white", onCopy }: { label: str
           {copied ? "Copied ✓" : "Copy"}
         </button>
       </div>
-    </div>
-  );
-}
-
-/** "Field manual" card: a one-or-two sentence explainer with optional deeper detail. */
-export function Explain({ term, children, more, tilt = -1 }: { term: string; children: ReactNode; more?: ReactNode; tilt?: number }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <PlayingCard face="white" accent="gold" tilt={tilt} deal delay={150} className="max-w-2xl">
-      <div className="flex items-center justify-between gap-3">
-        <span className="label text-black/60">Field manual</span>
-        <span className="font-mono text-xs font-bold text-black/40">★</span>
-      </div>
-      <div className="mt-2 font-display text-xl font-extrabold leading-tight sm:text-2xl">{term}</div>
-      <p className="mt-2 text-[15px] leading-[1.7] text-black/80 sm:text-base">{children}</p>
-      {more && (
-        <>
-          <button className="label mt-3 text-black/50 hover:text-black" onClick={() => setOpen(!open)}>
-            {open ? "− Less" : "+ Technical detail"}
-          </button>
-          {open && <div className="mt-2 text-sm leading-[1.7] text-black/70">{more}</div>}
-        </>
-      )}
-    </PlayingCard>
-  );
-}
-
-export function Check({ children, done = true, dark = false }: { children: ReactNode; done?: boolean; dark?: boolean }) {
-  const on = dark ? "bg-black text-white" : "bg-white text-black";
-  const off = dark ? "ring-in-black text-transparent" : "ring-in-white text-transparent opacity-40";
-  return (
-    <div className="flex items-center gap-3 font-mono text-sm font-semibold uppercase tracking-[0.06em]">
-      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-[4px] text-xs font-bold ${done ? on : off}`}>✓</span>
-      <span className={done ? "" : "opacity-40"}>{children}</span>
     </div>
   );
 }

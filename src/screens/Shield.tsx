@@ -1,12 +1,12 @@
 import { useCallback } from "react";
 import { ErrorPanel } from "../components/ErrorPanel";
-import { Objectives } from "../components/Objectives";
 import { CaseIcon, EyeIcon, LockIcon, UsbIcon } from "../components/icons";
 import { TxCinematic } from "../components/TxCinematic";
-import { Button, Explain, ExternalLink, MissionTitle, Panel, Screen, Stamp, Typewriter } from "../components/ui";
+import { Button, ExternalLink, MissionTitle, Panel, Screen, Stamp, Steps, Typewriter } from "../components/ui";
 import { config, explorerAddress } from "../config";
 import { useGame, useSnapshot } from "../game/state";
 import { useTxRunner } from "../game/useTxRunner";
+import { useUnlockChime } from "../game/useUnlockChime";
 import { formatZats, shortAddr } from "../lib/format";
 
 export function Shield() {
@@ -23,55 +23,67 @@ export function Shield() {
 
   const shield = () => engine && tx.run((onStage) => engine.shield(onStage));
 
+  const fundsConfirming = b.transparent === 0n;
+  useUnlockChime(fundsConfirming);
+  const steps = [fundsConfirming ? "Waiting for funds" : "Shield the funds", "Confirm in a block"];
+  const step = secured || nothingToShield ? 2 : tx.phase === "idle" ? 0 : 1;
+
   return (
     <Screen>
-      <MissionTitle code="03" title="Shield the intelligence." accent="Shield" status={secured || nothingToShield ? "COMPLETE" : "ACTIVE"} />
-      <div className="mt-6 max-w-md">
-        <Objectives
-          items={
-            nothingToShield
-              ? [{ label: "Funds already shielded", done: true }]
-              : [
-                  { label: "Shield the funds", done: tx.phase === "confirming" || secured },
-                  { label: "Confirmed in a block", done: secured },
-                ]
-          }
-        />
-      </div>
+      <MissionTitle
+        code="03"
+        title="Shield the intelligence."
+        accent="Shield"
+        status={secured || nothingToShield ? "COMPLETE" : "ACTIVE"}
+        info={{
+          term: "What is shielding?",
+          body: "Shielding moves funds into Zcash's shielded pool, helping keep transaction details private.",
+          more: (
+            <>
+              Your public (transparent) coins are spent into an encrypted note in Zcash's Sapling shielded pool, owned by your wallet. The blockchain stores
+              only a commitment to that note plus a zero-knowledge proof that the transaction is valid, so observers can't see who owns it or how much it
+              holds. The proof is generated right here in your browser.
+            </>
+          ),
+        }}
+      />
 
-      <div className="mt-10 space-y-10">
+      <div className="mt-8 space-y-8">
         <Surveillance exposed={exposed} address={s.agent?.transparent} amount={b.transparent} demo={demo} />
 
         {nothingToShield ? (
-          <div className="space-y-8">
+          <>
             <Stamp tone="violet">Already shielded</Stamp>
-            <p className="max-w-2xl text-[15px] leading-[1.7] text-white/90">
-              Your handler used a shielded channel — the funds arrived in the shielded pool, so nothing is exposed. Most exchanges send to a public
-              address, though. When that happens, this is the move that protects you.
-            </p>
-            <ShieldExplain />
-            <Button size="xl" onClick={() => go("infiltrate")}>
+            <p className="font-mono text-sm text-muted">Your funds arrived shielded — nothing is exposed.</p>
+            <Button size="xl" onClick={() => go("infiltrate")} className="w-full sm:w-auto">
               Next mission →
             </Button>
-          </div>
+          </>
         ) : tx.phase === "idle" ? (
-          <div className="space-y-10">
-            <Typewriter lines={["Your transfer information is exposed.", "Move the intelligence into the shielded pool before it goes anywhere else."]} />
-            <ShieldExplain />
+          <>
+            <Typewriter lines={["You're exposed. Shield the intelligence."]} />
             {tx.error != null && <ErrorPanel error={tx.error} context="shielding" onRetry={shield} />}
             {tx.error == null && (
-              <div className="flex flex-col items-stretch gap-3 sm:items-start">
-                <Button size="xl" onClick={shield} disabled={b.transparent === 0n} className="w-full !py-7 !text-xl sm:w-auto sm:!px-20 sm:!py-8 sm:!text-2xl">
-                  🔒 Shield
+              <Panel className="max-w-2xl space-y-6 p-5 sm:p-7">
+                <Steps labels={steps} current={step} />
+                <Button
+                  size="xl"
+                  onClick={shield}
+                  disabled={fundsConfirming}
+                  className={`w-full !py-7 !text-xl sm:w-auto sm:!px-20 sm:!py-8 sm:!text-2xl ${fundsConfirming ? "animate-pulse" : ""}`}
+                >
+                  {fundsConfirming ? "⏳ Funds confirming" : "🔒 Shield"}
                 </Button>
-                <span className="label text-[10px] text-dim">
-                  {b.transparent === 0n ? "Waiting for public funds to confirm…" : `Moves ${formatZats(b.transparent)} ${config.ticker} into the shielded pool`}
-                </span>
-              </div>
+                <p className="label text-[10px] text-dim">
+                  {fundsConfirming
+                    ? `Unlocks automatically${s.chainTip ? ` · block ${s.chainTip.toLocaleString()}` : ""}`
+                    : `${formatZats(b.transparent)} ${config.ticker} → shielded pool`}
+                </p>
+              </Panel>
             )}
-          </div>
+          </>
         ) : (
-          <div className="space-y-8">
+          <>
             <TxCinematic
               phase={tx.phase}
               txid={progress.shieldTxid}
@@ -87,10 +99,7 @@ export function Shield() {
             {secured && (
               <div className="animate-fade-up space-y-8">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <Stamp tone="violet">Intelligence secured</Stamp>
-                    <p className="mt-4 font-display text-3xl font-black">Your funds are now shielded.</p>
-                  </div>
+                  <Stamp tone="violet">Intelligence secured</Stamp>
                   <div className="ring-in-violet rounded-[14px] bg-lavender px-6 py-4 text-center text-black">
                     <div className="font-display text-2xl font-black">🔒 SHIELDED</div>
                     <div className="mt-1 font-mono text-xs font-bold">
@@ -98,32 +107,15 @@ export function Shield() {
                     </div>
                   </div>
                 </div>
-                <Button size="xl" onClick={() => go("infiltrate")}>
+                <Button size="xl" onClick={() => go("infiltrate")} className="w-full sm:w-auto">
                   Next mission →
                 </Button>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </Screen>
-  );
-}
-
-function ShieldExplain() {
-  return (
-    <Explain
-      term="What is shielding?"
-      more={
-        <>
-          Your public (transparent) coins are spent into an encrypted note in Zcash's Sapling shielded pool, owned by your wallet. The blockchain
-          stores only a commitment to that note plus a zero-knowledge proof that the transaction is valid, so observers can't see who owns it or how
-          much it holds. The proof is generated right here in your browser.
-        </>
-      }
-    >
-      Shielding moves funds into Zcash's shielded pool, helping keep transaction details private.
-    </Explain>
   );
 }
 

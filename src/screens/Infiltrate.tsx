@@ -1,7 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { EyeIcon, ShieldIcon } from "../components/icons";
-import { Objectives } from "../components/Objectives";
-import { Button, Explain, MissionTitle, Screen, Typewriter } from "../components/ui";
+import { Button, MissionTitle, Screen, Typewriter } from "../components/ui";
 import { useGame } from "../game/state";
 import { sfx } from "../lib/sound";
 
@@ -20,25 +19,26 @@ export function Infiltrate() {
 
   return (
     <Screen>
-      <MissionTitle code="04" title="Infiltration." accent="Infiltration" status={choice === "shielded" ? "ROUTE LOCKED" : "PLAY A CARD"} />
-      <div className="mt-6 max-w-md">
-        <Objectives
-          items={[
-            { label: "Choose a channel", done: choice !== null },
-            { label: "Avoid surveillance", done: choice === "shielded" },
-          ]}
-        />
-      </div>
-      <div className="mt-10 space-y-10">
-        <Typewriter lines={["The intelligence is secure. Now it has to reach your contact.", "Two channels. Play one card, agent."]} />
+      <MissionTitle
+        code="04"
+        title="Infiltration."
+        accent="Infiltration"
+        status={choice === "shielded" ? "ROUTE LOCKED" : "PLAY A CARD"}
+        info={{
+          term: "Shielded transactions",
+          body: "Zcash lets you send funds with shielded transactions, so sensitive transaction information — sender, receiver and amount — can remain private.",
+        }}
+      />
+      <div className="mt-8 space-y-8">
+        <Typewriter lines={["Two channels to your contact. Play one card."]} />
 
-        <div className="grid gap-8 py-4 sm:grid-cols-2 sm:gap-10">
+        <div className="mx-auto grid max-w-xl grid-cols-2 gap-4 py-2 sm:gap-6">
           <ChannelCard
             key={`p-${choice === "public" ? attempt : 0}`}
             title="Public channel."
             risk="👁 Surveillance risk"
-            body="Sender, receiver and amount are written to a public ledger anyone can read — forever."
-            icon={<EyeIcon className="h-10 w-10" />}
+            body="Sender, receiver and amount: public, forever."
+            icon={<EyeIcon className="h-6 w-6 sm:h-7 sm:w-7" />}
             face="bg-white"
             ring="ring-in-red"
             riskColor="text-red"
@@ -49,8 +49,8 @@ export function Infiltrate() {
           <ChannelCard
             title="Shielded channel."
             risk="🔒 Protected"
-            body="Transaction details are encrypted. Only you and your contact can see what moved."
-            icon={<ShieldIcon className="h-10 w-10" />}
+            body="Encrypted. Only you and your contact know."
+            icon={<ShieldIcon className="h-6 w-6 sm:h-7 sm:w-7" />}
             face="bg-lavender"
             ring="ring-in-violet"
             riskColor="text-violet"
@@ -63,19 +63,13 @@ export function Infiltrate() {
         {choice === "public" && (
           <div key={attempt} className="ring-in-red animate-shake max-w-2xl rounded-[14px] bg-black p-6">
             <div className="label text-red">✕ Transfer compromised</div>
-            <p className="mt-2 font-display text-2xl font-black">Busted. Surveillance saw everything.</p>
-            <p className="mt-2 text-[15px] leading-[1.7] text-muted">
-              On a public channel they'd see who paid whom and exactly how much. Your contact's cover is blown. Pick up your card and play again.
-            </p>
+            <p className="mt-2 font-display text-2xl font-black">Busted. They saw who, what and how much.</p>
           </div>
         )}
 
         {choice === "shielded" && (
-          <div className="animate-fade-up space-y-8">
-            <Explain term="Shielded transactions">
-              Zcash lets you send funds with shielded transactions, so sensitive transaction information can remain private.
-            </Explain>
-            <Button size="xl" onClick={() => go("handoff")}>
+          <div className="animate-fade-up">
+            <Button size="xl" onClick={() => go("handoff")} className="w-full sm:w-auto">
               Infiltrate →
             </Button>
           </div>
@@ -117,22 +111,22 @@ function ChannelCard({
   return (
     <button
       onClick={onClick}
-      className={`group relative flex aspect-[5/6] flex-col justify-between rounded-[14px] p-7 text-left text-black transition-all duration-300 hover:-translate-y-2 sm:aspect-[5/7] ${face} ${ring} ${
+      className={`group relative flex aspect-[3/4] flex-col justify-between rounded-[14px] p-3.5 text-left text-black transition-all duration-300 hover:-translate-y-2 sm:p-5 ${face} ${ring} ${
         state === "busted" ? "animate-shake" : ""
       } ${state === "discarded" ? "opacity-40" : ""}`}
       style={{ transform, "--tilt": `${tilt}deg` } as CSSProperties}
     >
       <div className="flex items-start justify-between">
-        <div className="grid h-16 w-16 place-items-center rounded-full bg-black text-white">{icon}</div>
-        {state === "played" && <span className="label ring-in-violet rounded-[38px] bg-white px-3 py-1 text-[10px] text-violet">Played ✓</span>}
-        {state === "busted" && <span className="label ring-in-red rounded-[38px] bg-white px-3 py-1 text-[10px] text-red">Busted ✕</span>}
+        <div className="grid h-10 w-10 place-items-center rounded-full bg-black text-white sm:h-12 sm:w-12">{icon}</div>
+        {state === "played" && <span className="label ring-in-violet rounded-[38px] bg-white px-2 py-0.5 text-[9px] text-violet sm:px-3 sm:py-1 sm:text-[10px]">Played ✓</span>}
+        {state === "busted" && <span className="label ring-in-red rounded-[38px] bg-white px-2 py-0.5 text-[9px] text-red sm:px-3 sm:py-1 sm:text-[10px]">Busted ✕</span>}
       </div>
       <div>
-        <div className="font-display text-4xl font-black leading-[1] sm:text-5xl">{title}</div>
-        <div className={`label mt-3 ${riskColor}`}>{risk}</div>
-        <p className="mt-3 text-[15px] leading-[1.6] text-black/75">{body}</p>
+        <div className="font-display text-xl font-black leading-[1.05] sm:text-3xl">{title}</div>
+        <div className={`label mt-2 text-[9px] sm:text-[11px] ${riskColor}`}>{risk}</div>
+        <p className="mt-2 text-[12px] leading-[1.45] text-black/75 sm:text-sm">{body}</p>
       </div>
-      <span className="label text-[10px] text-black/40 group-hover:text-black">Play this card →</span>
+      <span className="label text-[9px] text-black/40 group-hover:text-black sm:text-[10px]">Play this card →</span>
     </button>
   );
 }

@@ -1,0 +1,225 @@
+diff --git a/components/zcash_protocol/src/consensus.rs b/components/zcash_protocol/src/consensus.rs
+index e660e28..d390fbb 100644
+--- a/components/zcash_protocol/src/consensus.rs
++++ b/components/zcash_protocol/src/consensus.rs
+@@ -500,7 +500,6 @@ impl Parameters for MainNetwork {
+             NetworkUpgrade::Nu6_1 => Some(BlockHeight(3_146_400)),
+             NetworkUpgrade::Nu6_2 => Some(BlockHeight(3_364_600)),
+             NetworkUpgrade::Nu6_3 => Some(BlockHeight(3_428_143)),
+-            #[cfg(zcash_unstable = "nu7")]
+             NetworkUpgrade::Nu7 => None,
+         }
+     }
+@@ -533,8 +532,8 @@ impl Parameters for TestNetwork {
+             NetworkUpgrade::Nu6_1 => Some(BlockHeight(3_536_500)),
+             NetworkUpgrade::Nu6_2 => Some(BlockHeight(4_052_000)),
+             NetworkUpgrade::Nu6_3 => Some(BlockHeight(4_134_000)),
+-            #[cfg(zcash_unstable = "nu7")]
+-            NetworkUpgrade::Nu7 => None,
++            // CLASSIFIED patch 0004: NU7 testnet activation (ZIP 259; librustzcash a0c73f6d4).
++            NetworkUpgrade::Nu7 => Some(BlockHeight(4_465_026)),
+         }
+     }
+ }
+@@ -614,7 +613,6 @@ pub enum NetworkUpgrade {
+     /// The [Nu7 (proposed)] network upgrade.
+     ///
+     /// [Nu7 (proposed)]: https://z.cash/upgrade/nu7/
+-    #[cfg(zcash_unstable = "nu7")]
+     Nu7,
+ }
+ 
+@@ -634,7 +632,6 @@ impl fmt::Display for NetworkUpgrade {
+             NetworkUpgrade::Nu6_1 => write!(f, "Nu6.1"),
+             NetworkUpgrade::Nu6_2 => write!(f, "Nu6.2"),
+             NetworkUpgrade::Nu6_3 => write!(f, "Nu6.3"),
+-            #[cfg(zcash_unstable = "nu7")]
+             NetworkUpgrade::Nu7 => write!(f, "Nu7"),
+         }
+     }
+@@ -656,7 +653,6 @@ impl NetworkUpgrade {
+             NetworkUpgrade::Nu6_1 => BranchId::Nu6_1,
+             NetworkUpgrade::Nu6_2 => BranchId::Nu6_2,
+             NetworkUpgrade::Nu6_3 => BranchId::Nu6_3,
+-            #[cfg(zcash_unstable = "nu7")]
+             NetworkUpgrade::Nu7 => BranchId::Nu7,
+         }
+     }
+@@ -677,7 +673,6 @@ const UPGRADES_IN_ORDER: &[NetworkUpgrade] = &[
+     NetworkUpgrade::Nu6_1,
+     NetworkUpgrade::Nu6_2,
+     NetworkUpgrade::Nu6_3,
+-    #[cfg(zcash_unstable = "nu7")]
+     NetworkUpgrade::Nu7,
+ ];
+ 
+@@ -733,7 +728,6 @@ pub enum BranchId {
+     /// The consensus rules to be deployed by [`NetworkUpgrade::Nu6_3`].
+     Nu6_3,
+     /// The consensus rules to be deployed by [`NetworkUpgrade::Nu7`].
+-    #[cfg(zcash_unstable = "nu7")]
+     Nu7,
+ }
+ 
+@@ -756,8 +750,7 @@ impl TryFrom<u32> for BranchId {
+             0x4dec_4df0 => Ok(BranchId::Nu6_1),
+             0x5437_f330 => Ok(BranchId::Nu6_2),
+             0x37a5_165b => Ok(BranchId::Nu6_3),
+-            #[cfg(zcash_unstable = "nu7")]
+-            0xffff_ffff => Ok(BranchId::Nu7),
++            0x7719_0ad9 => Ok(BranchId::Nu7),
+             _ => Err("Unknown consensus branch ID"),
+         }
+     }
+@@ -777,8 +770,7 @@ impl From<BranchId> for u32 {
+             BranchId::Nu6_1 => 0x4dec_4df0,
+             BranchId::Nu6_2 => 0x5437_f330,
+             BranchId::Nu6_3 => 0x37a5_165b,
+-            #[cfg(zcash_unstable = "nu7")]
+-            BranchId::Nu7 => 0xffff_ffff,
++            BranchId::Nu7 => 0x7719_0ad9,
+         }
+     }
+ }
+@@ -816,7 +808,6 @@ impl BranchId {
+             BranchId::Nu6_1 => NetworkUpgrade::Nu6_1,
+             BranchId::Nu6_2 => NetworkUpgrade::Nu6_2,
+             BranchId::Nu6_3 => NetworkUpgrade::Nu6_3,
+-            #[cfg(zcash_unstable = "nu7")]
+             BranchId::Nu7 => NetworkUpgrade::Nu7,
+         })
+     }
+@@ -879,13 +870,9 @@ impl BranchId {
+             BranchId::Nu6_3 => params
+                 .activation_height(NetworkUpgrade::Nu6_3)
+                 .map(|lower| {
+-                    #[cfg(zcash_unstable = "nu7")]
+                     let upper = params.activation_height(NetworkUpgrade::Nu7);
+-                    #[cfg(not(zcash_unstable = "nu7"))]
+-                    let upper = None;
+                     (lower, upper)
+                 }),
+-            #[cfg(zcash_unstable = "nu7")]
+             BranchId::Nu7 => params
+                 .activation_height(NetworkUpgrade::Nu7)
+                 .map(|lower| (lower, None)),
+@@ -903,7 +890,6 @@ impl BranchId {
+             Sprout | Overwinter | Sapling | Blossom | Heartwood | Canopy | Nu5 | Nu6 | Nu6_1
+             | Nu6_2 => true,
+             BranchId::Nu6_3 => true,
+-            #[cfg(zcash_unstable = "nu7")]
+             BranchId::Nu7 => false,
+         }
+     }
+@@ -915,7 +901,6 @@ impl BranchId {
+             Sprout | Overwinter => false,
+             Sapling | Blossom | Heartwood | Canopy | Nu5 | Nu6 | Nu6_1 | Nu6_2 => true,
+             BranchId::Nu6_3 => true,
+-            #[cfg(zcash_unstable = "nu7")]
+             BranchId::Nu7 => true,
+         }
+     }
+@@ -927,7 +912,6 @@ impl BranchId {
+             Sprout | Overwinter | Sapling | Blossom | Heartwood | Canopy => false,
+             Nu5 | Nu6 | Nu6_1 | Nu6_2 => true,
+             BranchId::Nu6_3 => true,
+-            #[cfg(zcash_unstable = "nu7")]
+             BranchId::Nu7 => true,
+         }
+     }
+@@ -942,7 +926,6 @@ impl BranchId {
+             Nu5 | Nu6 | Nu6_1 => Some(OrchardProtocolRevision::InsecureV1),
+             Nu6_2 => Some(OrchardProtocolRevision::V2),
+             Nu6_3 => Some(OrchardProtocolRevision::V3),
+-            #[cfg(zcash_unstable = "nu7")]
+             Nu7 => Some(OrchardProtocolRevision::V3),
+         }
+     }
+@@ -991,7 +974,6 @@ pub mod testing {
+             BranchId::Nu6_1,
+             BranchId::Nu6_2,
+             BranchId::Nu6_3,
+-            #[cfg(zcash_unstable = "nu7")]
+             BranchId::Nu7,
+         ])
+     }
+@@ -1094,7 +1076,6 @@ mod tests {
+             BranchId::Nu6_3.orchard_protocol_revision(),
+             Some(OrchardProtocolRevision::V3)
+         );
+-        #[cfg(zcash_unstable = "nu7")]
+         assert_eq!(
+             BranchId::Nu7.orchard_protocol_revision(),
+             Some(OrchardProtocolRevision::V3)
+diff --git a/pczt/src/roles/creator/mod.rs b/pczt/src/roles/creator/mod.rs
+index 8ba7790..0035b06 100644
+--- a/pczt/src/roles/creator/mod.rs
++++ b/pczt/src/roles/creator/mod.rs
+@@ -112,7 +112,6 @@ impl Creator {
+             | BranchId::Nu6_1
+             | BranchId::Nu6_2 => (V5_TX_VERSION, V5_VERSION_GROUP_ID),
+             BranchId::Nu6_3 => (V6_TX_VERSION, V6_VERSION_GROUP_ID),
+-            #[cfg(zcash_unstable = "nu7")]
+             BranchId::Nu7 => (V6_TX_VERSION, V6_VERSION_GROUP_ID),
+         };
+ 
+diff --git a/pczt/src/roles/updater/mod.rs b/pczt/src/roles/updater/mod.rs
+index fc00a7b..cddd775 100644
+--- a/pczt/src/roles/updater/mod.rs
++++ b/pczt/src/roles/updater/mod.rs
+@@ -238,7 +238,6 @@ fn ensure_anchor_update_supported(global: &Global) -> Result<(), AnchorUpdateErr
+ 
+     match BranchId::try_from(global.consensus_branch_id) {
+         Ok(BranchId::Nu6_3) => Ok(()),
+-        #[cfg(zcash_unstable = "nu7")]
+         Ok(BranchId::Nu7) => Ok(()),
+         Ok(_) => Err(AnchorUpdateError::UnsupportedConsensusBranchId),
+         Err(_) => Err(AnchorUpdateError::UnknownConsensusBranchId),
+diff --git a/zcash_primitives/src/transaction/builder.rs b/zcash_primitives/src/transaction/builder.rs
+index 036dedf..41446d9 100644
+--- a/zcash_primitives/src/transaction/builder.rs
++++ b/zcash_primitives/src/transaction/builder.rs
+@@ -857,7 +857,6 @@ impl<P, U> Builder<P, U> {
+             // (V6) and the consensus branch is one in which Ironwood is active.
+             let ironwood_branch = match self.consensus_branch_id {
+                 BranchId::Nu6_3 => true,
+-                #[cfg(zcash_unstable = "nu7")]
+                 BranchId::Nu7 => true,
+                 _ => false,
+             };
+diff --git a/zcash_primitives/src/transaction/mod.rs b/zcash_primitives/src/transaction/mod.rs
+index 9706108..b318bcd 100644
+--- a/zcash_primitives/src/transaction/mod.rs
++++ b/zcash_primitives/src/transaction/mod.rs
+@@ -200,7 +200,6 @@ impl TxVersion {
+             BranchId::Nu6_1 => TxVersion::V5,
+             BranchId::Nu6_2 => TxVersion::V5,
+             BranchId::Nu6_3 => TxVersion::V6,
+-            #[cfg(zcash_unstable = "nu7")]
+             BranchId::Nu7 => TxVersion::V6,
+         }
+     }
+@@ -218,22 +217,19 @@ impl TxVersion {
+                 Sprout | Overwinter => false,
+                 Sapling | Blossom | Heartwood | Canopy | Nu5 | Nu6 | Nu6_1 | Nu6_2 => true,
+                 Nu6_3 => true,
+-                #[cfg(zcash_unstable = "nu7")]
+                 Nu7 => false, // ZIP 2003
+             },
+             TxVersion::V5 => match consensus_branch_id {
+                 Sprout | Overwinter | Sapling | Blossom | Heartwood | Canopy => false,
+                 Nu5 | Nu6 | Nu6_1 | Nu6_2 => true,
+                 Nu6_3 => true,
+-                #[cfg(zcash_unstable = "nu7")]
+                 Nu7 => true,
+             },
+             TxVersion::V6 => match consensus_branch_id {
+                 Sprout | Overwinter | Sapling | Blossom | Heartwood | Canopy | Nu5 | Nu6
+                 | Nu6_1 | Nu6_2 => false,
+                 Nu6_3 => true, // Ironwood / NU6.3
+-                #[cfg(zcash_unstable = "nu7")]
+-                Nu7 => true, // ZIP 230 or ZIP 248, whichever is chosen for activation
++                Nu7 => true, // CLASSIFIED patch 0004: NU7 retains the existing v6 format (ZIP 259)
+             },
+         }
+     }

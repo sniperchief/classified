@@ -1,18 +1,36 @@
 import { useCallback, useEffect, useState } from "react";
 import { ErrorPanel } from "../components/ErrorPanel";
-import { Objectives } from "../components/Objectives";
-import { SlideToDeliver } from "../components/SlideToDeliver";
+import { SlideToDeliver, type Lock } from "../components/SlideToDeliver";
 import { AgentIcon, HouseIcon, LockIcon } from "../components/icons";
 import { TxCinematic } from "../components/TxCinematic";
-import { Button, CopyField, MissionTitle, Panel, PlayingCard, Screen, Stamp, Typewriter } from "../components/ui";
+import { Button, MissionTitle, Panel, PlayingCard, Screen, Stamp, Steps, Typewriter } from "../components/ui";
 import { config } from "../config";
 import { useGame, useSnapshot } from "../game/state";
 import { useTxRunner } from "../game/useTxRunner";
 import { isConfirmed, useTxWatch } from "../game/useTxWatch";
-import { formatZats, parseZec } from "../lib/format";
+import { formatZats, parseZec, shortAddr } from "../lib/format";
 import { sfx } from "../lib/sound";
 
 const CODE_NAME = "NIGHTJAR";
+/** NIGHTJAR's identity: a portrait from the Zilkroad collection ("shielded identities" on Zcash). */
+const IDENTITY = {
+  src: "/zilkroad/zksnark-7470.png",
+  name: "zkSNARK #7470",
+  url: "https://zilkroad.com/explorer/7470",
+  alt: "NIGHTJAR — portrait zkSNARK #7470 from the Zilkroad collection",
+};
+
+function Portrait({ size, ring }: { size: string; ring: string }) {
+  return (
+    <img
+      src={IDENTITY.src}
+      alt={IDENTITY.alt}
+      width={520}
+      height={520}
+      className={`${size} ${ring} shrink-0 rounded-[10px] bg-black [image-rendering:pixelated]`}
+    />
+  );
+}
 const field = "w-full rounded-[38px] bg-black px-5 py-3.5 font-mono text-white placeholder:text-dim ring-in-white";
 /** Quick amounts for phones: tap instead of typing. */
 const CHIPS = [1_000_000n, 5_000_000n, 10_000_000n];
@@ -39,7 +57,7 @@ export function Handoff() {
       ? "Enter an amount like 0.05"
       : zats <= 0n
         ? "Amount must be above zero"
-        : fee !== null && zats + fee > available
+        : zats + (fee ?? 10_000n) > available
           ? "More than your shielded balance (incl. fee)"
           : null;
 
@@ -74,24 +92,51 @@ export function Handoff() {
   const contactReceived = isConfirmed(receipt);
   const broadcast = tx.phase === "confirming" || delivered;
   const estFee = fee ?? 10_000n;
+  const pending = s.agentBalance.shieldedPending;
+  const waitingForFunds = available === 0n && pending > 0n;
+  const steps = [waitingForFunds ? "Waiting for funds" : "Set amount", `Deliver to ${customOpen && custom.trim() ? "recipient" : CODE_NAME}`, "Confirm in a block", sentToContact ? `${CODE_NAME} receives` : "Recipient sees it"];
+  const amountReady = zats !== null && zats > 0n && !amountError;
+  const step = (sentToContact ? contactReceived : delivered) ? 4 : delivered ? 3 : broadcast ? 2 : amountReady ? 1 : 0;
+
+  // Arriving with a default the wallet can't cover? Pick the largest quick amount that fits.
+  useEffect(() => {
+    if (otherAmount || tx.phase !== "idle" || available === 0n || zats === null) return;
+    if (zats + estFee <= available) return;
+    const fit = [...CHIPS].reverse().find((c) => c + estFee <= available);
+    if (fit) setAmount(formatZats(fit));
+  }, [available, estFee, otherAmount, tx.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Why the slider is locked, in a few words, on the slider itself.
+  const lock: Lock | null = waitingForFunds
+    ? { kind: "wait", text: `⏳ Funds confirming${s.chainTip ? ` · block ${s.chainTip.toLocaleString()}` : ""}` }
+    : available === 0n
+      ? { kind: "fix", text: "No shielded funds" }
+      : addrError
+        ? { kind: "fix", text: "Fix the recipient address" }
+        : amountError
+          ? { kind: "fix", text: zats !== null && zats > 0n ? `Not enough for ${formatZats(zats)} — pick less` : "Choose an amount" }
+          : null;
 
   return (
     <Screen>
-      <MissionTitle code="05" title="Secure the handoff." accent="handoff" status={delivered ? "DELIVERED" : "ACTIVE"} />
-      <div className="mt-6 max-w-md">
-        <Objectives
-          items={[
-            { label: "Set the amount", done: broadcast || (zats !== null && zats > 0n && !amountError) },
-            { label: `Deliver to ${sentToContact || !customOpen ? CODE_NAME : "recipient"}`, done: broadcast },
-            { label: "Confirmed in a block", done: delivered },
-            sentToContact
-              ? { label: `${CODE_NAME} receives it`, done: contactReceived }
-              : { label: "Recipient's wallet can see it", done: delivered },
-          ]}
-        />
-      </div>
-      <div className="mt-10 space-y-10">
-        <Typewriter lines={["CONTACT LOCATED.", `Agent ${CODE_NAME} is waiting at the rendezvous.`]} speed={26} />
+      <MissionTitle
+        code="05"
+        title="Secure the handoff."
+        accent="handoff"
+        status={delivered ? "DELIVERED" : "ACTIVE"}
+        info={{
+          term: "A shielded transfer",
+          body: `You send ZEC in a shielded transaction: sender, receiver and amount stay encrypted on the chain. Only ${CODE_NAME}'s wallet can see it arrive.`,
+          more: (
+            <>
+              The transfer spends your shielded Sapling note and creates a new one for {CODE_NAME}, with a zero-knowledge proof generated in your browser.{" "}
+              {CODE_NAME}'s wallet runs in this page too, as a second account, so you can watch it detect the note on chain.
+            </>
+          ),
+        }}
+      />
+      <div className="mt-8 space-y-8">
+        <Typewriter lines={[`${CODE_NAME} is at the rendezvous. Deliver the intelligence.`]} speed={26} />
 
         {tx.phase === "idle" ? (
           <>
@@ -102,21 +147,25 @@ export function Handoff() {
                   <span className="label text-[10px] text-black/50">Contact dossier</span>
                   <span className="label text-[10px] text-pink">● Live</span>
                 </div>
-                <div className="my-6 grid place-items-center">
-                  <div className="grid h-24 w-24 place-items-center rounded-full bg-black text-white">
-                    <AgentIcon className="h-14 w-14" />
-                  </div>
+                <div className="my-5 grid place-items-center">
+                  <Portrait size="h-32 w-32" ring="ring-in-pink" />
                 </div>
                 <div className="font-display text-4xl font-black leading-none">{CODE_NAME}.</div>
                 <div className="mt-3 space-y-1 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-black/60">
                   <div>Status: in position</div>
                   <div>Channel: shielded only</div>
+                  {s.contactAddress && <div className="normal-case tracking-normal text-black/45">{shortAddr(s.contactAddress, 14, 6)}</div>}
+                  <div className="pt-1">
+                    Identity: {IDENTITY.name} ·{" "}
+                    <a href={IDENTITY.url} target="_blank" rel="noopener noreferrer" className="text-black underline decoration-black/30 underline-offset-2 hover:decoration-black">
+                      Zilkroad ↗
+                    </a>
+                  </div>
                 </div>
               </PlayingCard>
 
               <Panel className="space-y-6 p-6">
-                <div className="label text-muted">Transfer orders</div>
-                {s.contactAddress && !customOpen && <CopyField label={`${CODE_NAME}'s shielded address`} value={s.contactAddress} tone="violet" />}
+                <Steps labels={steps} current={step} />
 
                 <div>
                   <span className="label mb-2 block text-muted">Amount ({config.ticker})</span>
@@ -195,17 +244,12 @@ export function Handoff() {
               </Panel>
             </div>
 
-            {available === 0n && (
-              <p className="label text-[11px] text-dim">
-                {s.agentBalance.shieldedPending > 0n ? "Shielded funds are confirming — ready after the next block." : "No shielded funds available."}
-              </p>
-            )}
             {tx.error != null && <ErrorPanel error={tx.error} context="delivery" onRetry={deliver} />}
             {tx.error == null && (
-              <div className="max-w-xl">
+              <div className="mx-auto max-w-xl">
                 <SlideToDeliver
                   onConfirm={deliver}
-                  disabled={!!addrError || !!amountError || available === 0n}
+                  lock={lock}
                   target={customOpen && custom.trim() ? "RECIPIENT" : CODE_NAME}
                 />
               </div>
@@ -258,10 +302,22 @@ function RecipientTerminal({ received, zats }: { received: boolean; zats: bigint
       </div>
       <div className="p-6">
         {received ? (
-          <div className="animate-fade-up">
-            <div className="font-display text-4xl font-black leading-none">Intelligence received.</div>
-            <div className="mt-3 text-sm text-white/80">
-              +{formatZats(zats)} {config.ticker} · shielded · sender and amount hidden from the public chain
+          <div className="flex animate-fade-up flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="flex flex-col items-center gap-2">
+              <Portrait size="h-24 w-24" ring="ring-in-violet" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-lavender">✓ Identity verified</span>
+            </div>
+            <div>
+              <div className="font-display text-4xl font-black leading-none">Intelligence received.</div>
+              <div className="mt-3 text-sm text-white/80">
+                +{formatZats(zats)} {config.ticker} · shielded · sender and amount hidden from the public chain
+              </div>
+              <div className="mt-2 text-[11px] uppercase tracking-[0.1em] text-dim">
+                {CODE_NAME} = {IDENTITY.name} ·{" "}
+                <a href={IDENTITY.url} target="_blank" rel="noopener noreferrer" className="text-white underline decoration-white/30 underline-offset-2 hover:decoration-pink">
+                  Zilkroad ↗
+                </a>
+              </div>
             </div>
           </div>
         ) : (

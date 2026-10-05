@@ -1,5 +1,9 @@
 import { useRef, useState } from "react";
+import { useUnlockChime } from "../game/useUnlockChime";
 import { sfx } from "../lib/sound";
+
+/** Why the slider is locked, shown on the track itself. `wait` clears by itself; `fix` needs the player. */
+export type Lock = { text: string; kind: "wait" | "fix"; action?: { label: string; onClick: () => void } };
 
 /**
  * Drag the intel along the track into the contact's hands to deliver. Release past the end
@@ -9,13 +13,15 @@ import { sfx } from "../lib/sound";
  */
 export function SlideToDeliver({
   onConfirm,
-  disabled = false,
+  lock = null,
   target = "NIGHTJAR",
 }: {
   onConfirm: () => void;
-  disabled?: boolean;
+  lock?: Lock | null;
   target?: string;
 }) {
+  const disabled = !!lock;
+  useUnlockChime(disabled);
   const track = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
   const [x, setX] = useState(0); // 0..1
@@ -38,13 +44,19 @@ export function SlideToDeliver({
     <div>
       <div
         ref={track}
-        className={`relative h-[72px] select-none overflow-hidden rounded-[38px] bg-black ring-in-white [touch-action:none] ${disabled ? "opacity-35" : ""}`}
+        className={`relative h-[72px] select-none overflow-hidden rounded-[38px] bg-black [touch-action:none] ${
+          lock ? (lock.kind === "wait" ? "animate-pulse ring-in-ash" : "ring-in-red") : "ring-in-white"
+        }`}
       >
         {/* progress fill */}
         <div className="absolute inset-y-0 left-0 bg-pink/25" style={{ width: `calc(${x * 100}% + ${HANDLE / 2}px)` }} />
         {/* label */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center pl-16 pr-20 text-center font-mono text-[12px] font-bold uppercase tracking-[0.12em] text-white/70 sm:text-sm">
-          {done ? "Delivering…" : dragging ? "Release at the contact" : `Slide intel to ${target}`}
+        <div
+          className={`pointer-events-none absolute inset-0 flex items-center justify-center pl-16 pr-20 text-center font-mono text-[11px] font-bold uppercase leading-snug tracking-[0.1em] sm:text-sm ${
+            lock ? (lock.kind === "wait" ? "text-gold" : "text-red") : "text-white/70"
+          }`}
+        >
+          {done ? "Delivering…" : lock ? lock.text : dragging ? "Release at the contact" : `Slide intel to ${target}`}
         </div>
         {/* drop zone: the contact */}
         <div
@@ -59,7 +71,7 @@ export function SlideToDeliver({
           type="button"
           disabled={disabled || done}
           aria-label={`Deliver to ${target}`}
-          className={`absolute left-1 top-1 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-black ${dragging ? "cursor-grabbing" : "cursor-grab transition-transform duration-300"}`}
+          className={`absolute left-1 top-1 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-black disabled:opacity-40 ${dragging ? "cursor-grabbing" : "cursor-grab transition-transform duration-300"}`}
           style={{ transform: `translateX(${x * maxTravel()}px)` }}
           onPointerDown={(e) => {
             if (disabled || done) return;
@@ -95,14 +107,20 @@ export function SlideToDeliver({
       </div>
       {!done && (
         <div className="mt-2.5 text-center">
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={confirm}
-            className="label text-[10px] text-dim underline decoration-dim underline-offset-4 hover:text-white disabled:opacity-40"
-          >
-            Or tap to deliver
-          </button>
+          {lock?.action ? (
+            <button type="button" onClick={lock.action.onClick} className="label text-[11px] text-white underline decoration-pink decoration-2 underline-offset-4">
+              {lock.action.label}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={confirm}
+              className="label text-[10px] text-dim underline decoration-dim underline-offset-4 hover:text-white disabled:opacity-40"
+            >
+              {lock?.kind === "wait" ? "Unlocks automatically" : "Or tap to deliver"}
+            </button>
+          )}
         </div>
       )}
     </div>

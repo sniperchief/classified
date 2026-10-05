@@ -63,6 +63,18 @@ therefore patch WebZjs' three change strategies from `ShieldedProtocol::Orchard`
 and deliver to the contact's Sapling receiver (extracted from its Unified Address per ZIP 316).
 Sapling is a fully supported shielded pool: amounts, sender and receiver stay encrypted.
 
+**NU7 on testnet.** Zcash testnet activated NU7 ([ZIP 259](https://zips.z.cash/zip-0259)) at block
+4,465,026, with consensus branch ID `0x77190AD9`. NU7 introduces no new transaction format (v5/v6
+stay valid; only v4 is disallowed) and no changes to sighash, Sapling/Orchard rules or circuits — for
+wallets the only change is the branch ID. WebZjs pins librustzcash `0a2c6d1a`, where NU7 exists only
+behind the experimental `zcash_unstable = "nu7"` cfg with a placeholder ID, so its transactions were
+stamped NU6.3 and dropped by the network. Patch `0004a-nu7-librustzcash.patch` (applied to a local
+copy of librustzcash `0a2c6d1a`) mirrors upstream librustzcash commits `928592188` and `a0c73f6d4`:
+NU7 becomes a regular upgrade with ID `0x7719_0AD9`, testnet activation 4,465,026 (mainnet unset),
+v6 transactions and Orchard revision V3 — i.e. NU6.3 rules with a new ID. The experimental ZIP 233
+code stays disabled (NU7 does not deploy ZIP 233). `0004b-nu7-webzjs.patch` points WebZjs'
+`[patch.crates-io]` at the local copy and maps NU7 to the NU6.3 Orchard circuit.
+
 **Internal vs external Sapling keys.** `propose_shielding` sends shielded funds to the
 account's *internal* Sapling address (ZIP 316), and change goes there too. Upstream WebZjs signs
 Sapling spends only with the external key and exposes only the external proof generation key,
@@ -153,7 +165,8 @@ WebZjs' wallet package is not published to npm by its maintainers, so we compile
      --no-default-features --features="wasm wasm-parallel" -Z build-std="panic_abort,std"
    ```
 6. Apply the patches in `vendor/webzjs-wallet/patches/` (0001 Sapling change pool, 0002
-   prove off the main thread, 0003 internal Sapling keys) before building (step 5), then copy the output into `vendor/webzjs-wallet/`; `scripts/copy-webzjs.mjs` serves it from
+   prove off the main thread, 0003 internal Sapling keys, 0004b NU7 wiring) to WebZjs, and
+   0004a to a copy of librustzcash `0a2c6d1a` placed next to it as `../librustzcash` before building (step 5), then copy the output into `vendor/webzjs-wallet/`; `scripts/copy-webzjs.mjs` serves it from
    `/webzjs/` unbundled (Vite can't bundle wasm-bindgen-rayon's circular worker imports).
 
 ## Configuration

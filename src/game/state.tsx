@@ -43,6 +43,8 @@ export interface Progress {
   unshieldZats?: string;
   /** Mission to return to after visiting the landing page mid-run (via the logo). */
   resume?: Step;
+  /** The wallet this progress belongs to (its public address). See WalletGuard. */
+  walletTag?: string;
   /** Field-quiz score (correct first answers) and the questions already asked. */
   intel?: number;
   quizDone?: string[];
@@ -146,4 +148,39 @@ const noop = () => () => {};
 export function useSnapshot(): EngineSnapshot {
   const { engine } = useGame();
   return useSyncExternalStore(engine ? engine.subscribe : noop, engine ? engine.getSnapshot : () => EMPTY);
+}
+
+/** Missions that depend on this wallet's own funding/shielding having happened. */
+const AFTER_FUNDING: Step[] = ["shield", "infiltrate", "handoff", "complete", "bonus"];
+
+/**
+ * Keeps saved progress tied to the wallet that's actually loaded. If the wallet changes
+ * (new wallet, restore, cleared storage), the previous run's transaction records no longer
+ * describe this wallet, so they are cleared and the player resumes from Mission 02 —
+ * otherwise an old shield could appear "done" for a wallet that never shielded.
+ * Never touches the wallet or its funds.
+ */
+export function WalletGuard() {
+  const { progress, update, engine } = useGame();
+  const s = useSnapshot();
+  const tag = s.hasWallet && engine && s.mode === progress.mode ? s.agent?.transparent : undefined;
+
+  useEffect(() => {
+    if (!tag || progress.walletTag === tag) return;
+    const patch: Partial<Progress> = {
+      walletTag: tag,
+      shieldTxid: undefined,
+      arrivedShielded: undefined,
+      sendTxid: undefined,
+      sendTo: undefined,
+      sendZats: undefined,
+      unshieldTxid: undefined,
+      unshieldZats: undefined,
+    };
+    if (AFTER_FUNDING.includes(progress.step)) patch.step = "acquire";
+    if (progress.resume && AFTER_FUNDING.includes(progress.resume)) patch.resume = "acquire";
+    update(patch);
+  }, [tag]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
 }

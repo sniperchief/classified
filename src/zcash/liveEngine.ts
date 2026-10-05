@@ -309,8 +309,11 @@ export class LiveEngine implements MissionEngine {
     const list = await this.worker.call("history", { accountId });
     return list.map((e) => {
       const height = field(e, "block_height");
+      const type = field(e, "tx_type");
       return {
         txid: String(field(e, "txid") ?? ""),
+        // TransactionType: 0/"Received" = funds from outside; 1/"Sent" and 2/"Shielded" = this wallet acted.
+        received: type === 0 || type === "Received",
         status: {
           state: statusFrom(field(e, "status")),
           confirmations: Number(field(e, "confirmations") ?? 0),
@@ -323,9 +326,12 @@ export class LiveEngine implements MissionEngine {
   private async findTx(accountId: number, id: string): Promise<TxStatus> {
     const list = await this.history(accountId);
     if (id.startsWith("pending:")) {
-      // The agent's first transaction mined at/after the send height (or still unmined).
+      // A transaction this wallet sent (never one it received, e.g. a faucet deposit),
+      // mined at/after the send height or still unmined.
       const sentAt = Number(id.slice(8));
-      const hit = list.find((e) => e.txid && (e.status.height === undefined ? e.status.state === "pending" : e.status.height >= sentAt));
+      const hit = list.find(
+        (e) => e.txid && !e.received && (e.status.height === undefined ? e.status.state === "pending" : e.status.height >= sentAt),
+      );
       return hit ? { ...hit.status, txid: hit.txid } : { state: "unknown", confirmations: 0 };
     }
     const hit = list.find((e) => e.txid && sameTxid(e.txid, id));

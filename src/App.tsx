@@ -2,7 +2,7 @@ import { StatusBar, TopBar } from "./components/Hud";
 import { UnlockToast } from "./components/Unlock";
 import { ErrorPanel } from "./components/ErrorPanel";
 import { Button } from "./components/ui";
-import { GameProvider, useGame, useSnapshot } from "./game/state";
+import { GameProvider, WalletGuard, useGame, useSnapshot } from "./game/state";
 import { Acquire } from "./screens/Acquire";
 import { Bonus } from "./screens/Bonus";
 import { Briefing } from "./screens/Briefing";
@@ -49,6 +49,7 @@ function Game() {
   return (
     <>
       <div className="relative min-h-dvh">
+        <WalletGuard />
         <TopBar />
         <BootError />
         <main key={`${progress.step}:${progress.mode}`} className="relative">
